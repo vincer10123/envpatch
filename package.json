@@ -1,0 +1,29 @@
+{
+  "name": "envpatch",
+  "version": "0.1.0",
+  "description": "Utility to diff and merge .env files across environments safely",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "env",
+    "dotenv",
+    "diff",
+    "merge",
+    "environment"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/*.test.js"
+    ]
+  }
+}
