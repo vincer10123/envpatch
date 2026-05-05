@@ -28,16 +28,27 @@ Merge changes from one environment file into another:
 npx envpatch merge .env.staging .env.production --output .env.merged
 ```
 
+Validate that all required keys are present in an env file:
+
+```bash
+npx envpatch validate .env --required .env.example
+```
+
 Use programmatically in your project:
 
 ```js
-const { diff, merge } = require('envpatch');
+const { diff, merge, validate } = require('envpatch');
 
 const changes = diff('.env', '.env.production');
 console.log(changes);
 // { added: ['NEW_KEY'], removed: ['OLD_KEY'], changed: ['API_URL'] }
 
 merge('.env.staging', '.env.production', { output: '.env.merged' });
+
+// Check that all keys from .env.example exist in .env
+const result = validate('.env', { required: '.env.example' });
+console.log(result);
+// { valid: false, missing: ['STRIPE_KEY', 'SENTRY_DSN'] }
 ```
 
 > **Note:** `envpatch` never overwrites secret values without confirmation. Use `--force` to skip prompts.
@@ -51,6 +62,7 @@ merge('.env.staging', '.env.production', { output: '.env.merged' });
 | `--output` | Path for the merged output file |
 | `--force` | Skip confirmation prompts |
 | `--silent` | Suppress output logs |
+| `--required` | Path to a file whose keys are treated as required |
 
 ---
 
