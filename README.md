@@ -34,10 +34,16 @@ Validate that all required keys are present in an env file:
 npx envpatch validate .env --required .env.example
 ```
 
+Strip keys from an env file that aren't present in a reference file:
+
+```bash
+npx envpatch strip .env --reference .env.example --output .env.clean
+```
+
 Use programmatically in your project:
 
 ```js
-const { diff, merge, validate } = require('envpatch');
+const { diff, merge, validate, strip } = require('envpatch');
 
 const changes = diff('.env', '.env.production');
 console.log(changes);
@@ -49,6 +55,9 @@ merge('.env.staging', '.env.production', { output: '.env.merged' });
 const result = validate('.env', { required: '.env.example' });
 console.log(result);
 // { valid: false, missing: ['STRIPE_KEY', 'SENTRY_DSN'] }
+
+// Remove keys not present in .env.example
+strip('.env', { reference: '.env.example', output: '.env.clean' });
 ```
 
 > **Note:** `envpatch` never overwrites secret values without confirmation. Use `--force` to skip prompts.
@@ -63,6 +72,7 @@ console.log(result);
 | `--force` | Skip confirmation prompts |
 | `--silent` | Suppress output logs |
 | `--required` | Path to a file whose keys are treated as required |
+| `--reference` | Path to a file used as the reference keyset for `strip` |
 
 ---
 
