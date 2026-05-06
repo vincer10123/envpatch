@@ -17,6 +17,13 @@
  * @returns {Record<string, string>}
  */
 function merge(base, patch, options = {}) {
+  if (base === null || typeof base !== 'object') {
+    throw new TypeError('base must be a non-null object');
+  }
+  if (patch === null || typeof patch !== 'object') {
+    throw new TypeError('patch must be a non-null object');
+  }
+
   const { removeAbsent = false, skipExisting = false } = options;
 
   const result = removeAbsent ? {} : { ...base };
