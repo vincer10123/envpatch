@@ -1,66 +1,68 @@
-import { createHash } from 'crypto';
+import { randomBytes } from 'crypto';
 
 /**
- * Creates an audit log entry for an env operation.
- * @param {string} operation - 'diff' | 'merge' | 'patch' | 'snapshot'
- * @param {object} meta - Additional metadata
- * @returns {object} audit entry
+ * Generate a short unique id for audit entries.
+ * @returns {string}
+ */
+export function generateId() {
+  return randomBytes(6).toString('hex');
+}
+
+/**
+ * Create a single audit log entry.
+ * @param {string} operation - e.g. 'diff', 'merge', 'apply', 'snapshot'
+ * @param {object} meta - arbitrary metadata about the operation
+ * @returns {object}
  */
 export function createAuditEntry(operation, meta = {}) {
   return {
     id: generateId(),
     timestamp: new Date().toISOString(),
     operation,
-    ...meta,
+    meta,
   };
 }
 
 /**
- * Formats a list of audit entries as a human-readable log.
- * @param {object[]} entries
- * @returns {string}
- */
-export function formatAuditLog(entries) {
-  if (!entries || entries.length === 0) return '(no audit entries)';
-  return entries
-    .map((e) => {
-      const parts = [`[${e.timestamp}]`, `[${e.operation.toUpperCase()}]`];
-      if (e.user) parts.push(`user=${e.user}`);
-      if (e.file) parts.push(`file=${e.file}`);
-      if (e.keys && e.keys.length) parts.push(`keys=${e.keys.join(',')}`);
-      if (e.note) parts.push(e.note);
-      return parts.join(' ');
-    })
-    .join('\n');
-}
-
-/**
- * Filters audit entries by operation type.
- * @param {object[]} entries
+ * Filter audit log entries by operation type.
+ * @param {object[]} log
  * @param {string} operation
  * @returns {object[]}
  */
-export function filterByOperation(entries, operation) {
-  return entries.filter((e) => e.operation === operation);
+export function filterByOperation(log, operation) {
+  return log.filter(entry => entry.operation === operation);
 }
 
 /**
- * Filters audit entries within a date range.
- * @param {object[]} entries
+ * Filter audit log entries within a date range (inclusive).
+ * @param {object[]} log
  * @param {Date} from
  * @param {Date} to
  * @returns {object[]}
  */
-export function filterByDateRange(entries, from, to) {
-  return entries.filter((e) => {
-    const ts = new Date(e.timestamp);
+export function filterByDateRange(log, from, to) {
+  return log.filter(entry => {
+    const ts = new Date(entry.timestamp);
     return ts >= from && ts <= to;
   });
 }
 
-function generateId() {
-  return createHash('sha1')
-    .update(Math.random().toString() + Date.now())
-    .digest('hex')
-    .slice(0, 8);
+/**
+ * Format an audit log array into a human-readable string.
+ * @param {object[]} log
+ * @returns {string}
+ */
+export function formatAuditLog(log) {
+  if (!log || log.length === 0) {
+    return 'No audit entries found.';
+  }
+
+  return log
+    .map(entry => {
+      const meta = Object.entries(entry.meta)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(' ');
+      return `[${entry.timestamp}] (${entry.id}) ${entry.operation}${meta ? ' ' + meta : ''}`;
+    })
+    .join('\n');
 }
