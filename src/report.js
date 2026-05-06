@@ -1,77 +1,51 @@
-/**
- * Generate human-readable reports from diff and audit data,
- * with optional redaction of sensitive values.
- */
-
-const { redactDiff, redactEnv } = require('./redact');
+import { format as formatDiff } from './diff.js';
+import { formatAuditLog } from './audit.js';
+import { redactDiff, redactEnv } from './redact.js';
 
 /**
- * Format a diff as a report string.
- * @param {object} diffObj
+ * Generate a human-readable diff report.
+ * @param {object} diffResult - Result from diff()
  * @param {object} [options]
- * @param {boolean} [options.redact=true]
- * @param {string} [options.title]
+ * @param {boolean} [options.redact=false] - Redact sensitive values
+ * @param {string} [options.title] - Optional report title
  * @returns {string}
  */
-function diffReport(diffObj, { redact = true, title = 'Env Diff Report' } = {}) {
-  const d = redact ? redactDiff(diffObj) : diffObj;
-  const lines = [`=== ${title} ===`, ''];
+export function diffReport(diffResult, options = {}) {
+  const { redact = false, title } = options;
+  const d = redact ? redactDiff(diffResult) : diffResult;
 
-  const added = Object.entries(d.added || {});
-  const removed = Object.entries(d.removed || {});
-  const changed = Object.entries(d.changed || {});
+  const lines = [];
+  if (title) lines.push(`# ${title}`, '');
 
-  if (added.length) {
-    lines.push('Added:');
-    added.forEach(([k, v]) => lines.push(`  + ${k}=${v}`));
-    lines.push('');
-  }
-  if (removed.length) {
-    lines.push('Removed:');
-    removed.forEach(([k, v]) => lines.push(`  - ${k}=${v}`));
-    lines.push('');
-  }
-  if (changed.length) {
-    lines.push('Changed:');
-    changed.forEach(([k, { from, to }]) =>
-      lines.push(`  ~ ${k}: ${from} → ${to}`)
-    );
-    lines.push('');
-  }
-  if (!added.length && !removed.length && !changed.length) {
-    lines.push('No differences found.');
-    lines.push('');
-  }
+  lines.push('## Diff Summary');
+  lines.push(`  Added:    ${Object.keys(d.added ?? {}).length}`);
+  lines.push(`  Removed:  ${Object.keys(d.removed ?? {}).length}`);
+  lines.push(`  Changed:  ${Object.keys(d.changed ?? {}).length}`);
+  lines.push('');
+  lines.push('## Details');
+  lines.push(formatDiff(d));
 
-  lines.push(`Unchanged: ${Object.keys(d.unchanged || {}).length} key(s)`);
   return lines.join('\n');
 }
 
 /**
- * Format an audit log as a report string.
- * @param {object[]} entries
+ * Generate a human-readable audit log report.
+ * @param {object[]} entries - Audit log entries
  * @param {object} [options]
- * @param {boolean} [options.redact=true]
+ * @param {string} [options.title] - Optional report title
+ * @param {number} [options.limit] - Max entries to include
  * @returns {string}
  */
-function auditReport(entries, { redact = true } = {}) {
-  if (!entries.length) return '=== Audit Log ===\n\nNo entries found.';
+export function auditReport(entries, options = {}) {
+  const { title, limit } = options;
+  const subset = limit ? entries.slice(-limit) : entries;
 
-  const lines = ['=== Audit Log ===', ''];
-  for (const entry of entries) {
-    lines.push(`[${entry.timestamp}] ${entry.operation} (id: ${entry.id})`);
-    if (entry.environment) lines.push(`  Environment: ${entry.environment}`);
-    if (entry.diff) {
-      const d = redact ? redactDiff(entry.diff) : entry.diff;
-      const adds = Object.keys(d.added || {}).length;
-      const removes = Object.keys(d.removed || {}).length;
-      const changes = Object.keys(d.changed || {}).length;
-      lines.push(`  Changes: +${adds} -${removes} ~${changes}`);
-    }
-    if (entry.meta) lines.push(`  Meta: ${JSON.stringify(entry.meta)}`);
-    lines.push('');
-  }
-  return lines.join('\n').trimEnd();
+  const lines = [];
+  if (title) lines.push(`# ${title}`, '');
+
+  lines.push(`## Audit Log (${subset.length} entries)`);
+  lines.push('');
+  lines.push(formatAuditLog(subset));
+
+  return lines.join('\n');
 }
-
-module.exports = { diffReport, auditReport };
