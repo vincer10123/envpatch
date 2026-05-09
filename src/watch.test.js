@@ -16,12 +16,24 @@ function sleep(ms) {
 
 describe('watchEnv', () => {
   let file;
+  // Keep track of all watcher handles so we can stop them in afterEach
+  // in case a test throws before calling handle.stop()
+  const handles = [];
+
+  function startWatcher(path, opts) {
+    const handle = watchEnv(path, opts);
+    handles.push(handle);
+    return handle;
+  }
 
   beforeEach(() => {
     file = tmpFile();
   });
 
   afterEach(() => {
+    while (handles.length) {
+      try { handles.pop().stop(); } catch {}
+    }
     try { fs.unlinkSync(file); } catch {}
   });
 
@@ -30,16 +42,15 @@ describe('watchEnv', () => {
   });
 
   it('returns a stop() method', () => {
-    const handle = watchEnv(file, { onChange: () => {} });
+    const handle = startWatcher(file, { onChange: () => {} });
     expect(typeof handle.stop).toBe('function');
-    handle.stop();
   });
 
   it('calls onChange when file content changes', async () => {
     fs.writeFileSync(file, 'FOO=bar\n');
     const changes = [];
 
-    const handle = watchEnv(file, {
+    const handle = startWatcher(file, {
       environment: 'test',
       onChange: (diffResult, entry) => {
         changes.push({ diffResult, entry });
@@ -61,7 +72,7 @@ describe('watchEnv', () => {
     fs.writeFileSync(file, 'FOO=bar\n');
     const changes = [];
 
-    const handle = watchEnv(file, {
+    const handle = startWatcher(file, {
       onChange: () => changes.push(1),
     });
 
