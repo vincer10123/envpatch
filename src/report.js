@@ -1,63 +1,56 @@
+/**
+ * Generate human-readable reports for diff, audit, promotion, and lint results.
+ */
+
+const { format } = require('./diff');
 const { formatAuditLog } = require('./audit');
-const { redactDiff } = require('./redact');
 const { formatPromotionSummary } = require('./promote');
+const { formatLintResults } = require('./lint');
 
 /**
- * Generate a diff report between two parsed envs.
- * @param {object} diffResult - output from diff()
- * @param {object} [options]
- * @param {boolean} [options.redact] - redact sensitive values
+ * @param {object} diffResult
  * @returns {string}
  */
-function diffReport(diffResult, options = {}) {
-  const d = options.redact ? redactDiff(diffResult) : diffResult;
+function diffReport(diffResult) {
   const lines = ['=== Diff Report ==='];
-  const { added = {}, removed = {}, changed = {} } = d;
-
-  if (!Object.keys(added).length && !Object.keys(removed).length && !Object.keys(changed).length) {
-    lines.push('No differences found.');
-    return lines.join('\n');
-  }
-
-  for (const key of Object.keys(added)) lines.push(`+ ${key}=${added[key]}`);
-  for (const key of Object.keys(removed)) lines.push(`- ${key}=${removed[key]}`);
-  for (const key of Object.keys(changed)) {
-    lines.push(`~ ${key}: ${changed[key].from} → ${changed[key].to}`);
-  }
+  const formatted = format(diffResult);
+  lines.push(formatted || 'No differences found.');
   return lines.join('\n');
 }
 
 /**
- * Generate an audit log report.
- * @param {object[]} entries - audit log entries
- * @param {object} [options]
- * @param {string} [options.operation] - filter by operation type
+ * @param {import('./audit').AuditEntry[]} entries
  * @returns {string}
  */
-function auditReport(entries, options = {}) {
-  const { filterByOperation } = require('./audit');
-  const filtered = options.operation ? filterByOperation(entries, options.operation) : entries;
-  const lines = ['=== Audit Report ==='];
-  if (!filtered.length) {
-    lines.push('No audit entries found.');
-    return lines.join('\n');
-  }
-  lines.push(formatAuditLog(filtered));
+function auditReport(entries) {
+  const lines = ['=== Audit Log ==='];
+  lines.push(formatAuditLog(entries) || 'No audit entries.');
   return lines.join('\n');
 }
 
 /**
- * Generate a promotion report.
- * @param {string[]} promoted
- * @param {string[]} skipped
- * @param {string} from
- * @param {string} to
+ * @param {object} promotionResult
  * @returns {string}
  */
-function promotionReport(promoted, skipped, from, to) {
+function promotionReport(promotionResult) {
   const lines = ['=== Promotion Report ==='];
-  lines.push(formatPromotionSummary(promoted, skipped, from, to));
+  lines.push(formatPromotionSummary(promotionResult));
   return lines.join('\n');
 }
 
-module.exports = { diffReport, auditReport, promotionReport };
+/**
+ * @param {import('./lint').LintResult[]} lintResults
+ * @param {object} [options]
+ * @param {string} [options.filename]
+ * @returns {string}
+ */
+function lintReport(lintResults, options = {}) {
+  const { filename } = options;
+  const header = filename ? `=== Lint Report: ${filename} ===` : '=== Lint Report ===';
+  const errors = lintResults.filter(r => r.level === 'error').length;
+  const warnings = lintResults.filter(r => r.level === 'warn').length;
+  const summary = `${errors} error(s), ${warnings} warning(s)`;
+  return [header, formatLintResults(lintResults), summary].join('\n');
+}
+
+module.exports = { diffReport, auditReport, promotionReport, lintReport };
