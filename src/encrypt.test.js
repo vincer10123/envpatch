@@ -19,6 +19,12 @@ describe('encryptValue / decryptValue', () => {
     expect(decryptValue(enc, PASS)).toBe('hello');
   });
 
+  test('round-trips an empty string', () => {
+    const enc = encryptValue('', PASS);
+    expect(isEncrypted(enc)).toBe(true);
+    expect(decryptValue(enc, PASS)).toBe('');
+  });
+
   test('produces different ciphertext each time', () => {
     const a = encryptValue('hello', PASS);
     const b = encryptValue('hello', PASS);
@@ -55,6 +61,13 @@ describe('encryptEnv', () => {
     const already = encryptValue('secret', PASS);
     const result = encryptEnv({ DB_PASS: already }, PASS);
     expect(result.DB_PASS).toBe(already);
+  });
+
+  test('does not mutate the original env object', () => {
+    const original = { DB_PASS: 'secret', HOST: 'localhost' };
+    const copy = { ...original };
+    encryptEnv(original, PASS);
+    expect(original).toEqual(copy);
   });
 });
 
