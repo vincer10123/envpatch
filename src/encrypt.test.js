@@ -39,6 +39,20 @@ describe('encryptValue / decryptValue', () => {
   test('throws if value not encrypted', () => {
     expect(() => decryptValue('plaintext', PASS)).toThrow('Value is not encrypted');
   });
+
+  test('round-trips special characters', () => {
+    const special = 'p@$$w0rd!#%^&*()=+[]{}|;:\',.<>?/`~';
+    const enc = encryptValue(special, PASS);
+    expect(isEncrypted(enc)).toBe(true);
+    expect(decryptValue(enc, PASS)).toBe(special);
+  });
+
+  test('round-trips a multiline value', () => {
+    const multiline = 'line1\nline2\nline3';
+    const enc = encryptValue(multiline, PASS);
+    expect(isEncrypted(enc)).toBe(true);
+    expect(decryptValue(enc, PASS)).toBe(multiline);
+  });
 });
 
 describe('encryptEnv', () => {
@@ -84,5 +98,13 @@ describe('decryptEnv', () => {
     const encrypted = encryptEnv(env, PASS);
     const decrypted = decryptEnv(encrypted, PASS);
     expect(decrypted).toEqual(env);
+  });
+
+  test('does not mutate the original env object', () => {
+    const enc = encryptValue('secret', PASS);
+    const original = { DB_PASS: enc, HOST: 'localhost' };
+    const copy = { ...original };
+    decryptEnv(original, PASS);
+    expect(original).toEqual(copy);
   });
 });
